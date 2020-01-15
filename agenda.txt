@@ -1,0 +1,22 @@
+1.	Atmel Studio vs. MPLAPX  ? presentation, roadmap
+2.	Getting Started Atmel Studio  ? where to find what 
+3.	Using ASF – Atmel Software Framework  ? where to find what: http://atmel-studio-doc.s3-website-us-east-1.amazonaws.com/webhelp/GUID-2A8AADED-413E-4021-AF0C-D99E61B8160D-en-US-3/index.html?GUID-C58264F2-416F-4FFE-B674-BA8C6599C019
+
+4.	Using Atmel Start ? showing atmel start, where to find what
+5.	GPIO – Example   ? LED blinky, push button
+6.	UART – Example  ? Print data on tera term 
+7.	Timer – Example ? button debouncing, PWM LED fading
+8.	ADC – Example  ? potential-meter for LED facing
+9.	DAC – Example ? oscilloscope
+10.	I2C – Example ? (optional TE sensor)
+11.	SPI – Example ? (optional)
+
+
+
+Slides: Atmel Studio, Atmel Start navigation, where to fine what.
+
+Handson 1: GPIO - UART (Deep dive into the generated code)
+Handson 2: Timer
+Handson 3: ADC-DAC
+Handson 4: I2C (sensor TE, secure element, read serial number)
+Handson 5: SPI (No Idea. Some memory shield)

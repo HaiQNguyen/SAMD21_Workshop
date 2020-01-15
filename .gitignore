@@ -1,0 +1,9 @@
+Document/docx/
+Solution/SAMD21_*/vs./
+Solution/SAMD21_*/debug.log
+Solution/SAMD21_*/SAMD21_*/.atmel-start-backup/
+Solution/SAMD21_*/SAMD21_*/.atmelstart/
+Solution/SAMD21_*/SAMD21_*/Debug/
+Solution/SAMD21_*/SAMD21_*/debug.log
+Solution/SAMD21_*/SAMD21_*/Default.xml
+Solution/SAMD21_*/SAMD21_*/Release.xml
