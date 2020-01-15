@@ -122,19 +122,21 @@ static struct tc_configuration _tcs[] = {
 #endif
 };
 
-static struct _pwm_device *_tc7_dev = NULL;
+static struct _timer_device *_tc3_dev = NULL;
 
 static int8_t         get_tc_index(const void *const hw);
 static uint8_t        tc_get_hardware_index(const void *const hw);
 static void           _tc_init_irq_param(const void *const hw, void *dev);
 static inline uint8_t _get_hardware_offset(const void *const hw);
 /**
- * \brief Initialize TC for PWM mode
+ * \brief Initialize TC
  */
-int32_t _pwm_init(struct _pwm_device *const device, void *const hw)
+int32_t _timer_init(struct _timer_device *const device, void *const hw)
 {
-	int8_t i   = get_tc_index(hw);
+	int8_t i = get_tc_index(hw);
+
 	device->hw = hw;
+	ASSERT(ARRAY_SIZE(_tcs));
 
 	hri_tc_wait_for_sync(hw);
 	if (hri_tc_get_CTRLA_reg(hw, TC_CTRLA_ENABLE)) {
@@ -154,10 +156,12 @@ int32_t _pwm_init(struct _pwm_device *const device, void *const hw)
 	} else if ((_tcs[i].ctrl_a & TC_CTRLA_MODE_Msk) == TC_CTRLA_MODE_COUNT16) {
 		hri_tccount16_write_CC_reg(hw, 0, (hri_tccount16_cc_reg_t)_tcs[i].cc0);
 		hri_tccount16_write_CC_reg(hw, 1, (hri_tccount16_cc_reg_t)_tcs[i].cc1);
-	} else {
-		/* 8-bit resolution is not accepted by duty cycle control */
-		return ERR_INVALID_DATA;
+	} else if ((_tcs[i].ctrl_a & TC_CTRLA_MODE_Msk) == TC_CTRLA_MODE_COUNT8) {
+		hri_tccount8_write_CC_reg(hw, 0, (hri_tccount8_cc_reg_t)_tcs[i].cc0);
+		hri_tccount8_write_CC_reg(hw, 1, (hri_tccount8_cc_reg_t)_tcs[i].cc1);
+		hri_tccount8_write_PER_reg(hw, _tcs[i].per);
 	}
+	hri_tc_set_INTEN_OVF_bit(hw);
 
 	_tc_init_irq_param(hw, (void *)device);
 	NVIC_DisableIRQ((IRQn_Type)((uint8_t)TC_IRQ_BASE_INDEX + tc_get_hardware_index(hw)));
@@ -167,9 +171,9 @@ int32_t _pwm_init(struct _pwm_device *const device, void *const hw)
 	return ERR_NONE;
 }
 /**
- * \brief De-initialize TC for PWM mode
+ * \brief De-initialize TC
  */
-void _pwm_deinit(struct _pwm_device *const device)
+void _timer_deinit(struct _timer_device *const device)
 {
 	void *const hw = device->hw;
 
@@ -179,89 +183,57 @@ void _pwm_deinit(struct _pwm_device *const device)
 	hri_tc_set_CTRLA_SWRST_bit(hw);
 }
 /**
- * \brief Start PWM
+ * \brief Start hardware timer
  */
-void _pwm_enable(struct _pwm_device *const device)
+void _timer_start(struct _timer_device *const device)
 {
 	hri_tc_set_CTRLA_ENABLE_bit(device->hw);
 }
 /**
- * \brief Stop PWM
+ * \brief Stop hardware timer
  */
-void _pwm_disable(struct _pwm_device *const device)
+void _timer_stop(struct _timer_device *const device)
 {
 	hri_tc_clear_CTRLA_ENABLE_bit(device->hw);
 }
 /**
- * \brief Set PWM parameter
+ * \brief Set timer period
  */
-void _pwm_set_param(struct _pwm_device *const device, const pwm_period_t period, const pwm_period_t duty_cycle)
+void _timer_set_period(struct _timer_device *const device, const uint32_t clock_cycles)
 {
-	int8_t      i  = get_tc_index(device->hw);
 	void *const hw = device->hw;
-	_tcs[i].cc0    = period;
-	_tcs[i].cc1    = duty_cycle;
-	if ((_tcs[i].ctrl_a & TC_CTRLA_MODE_Msk) == TC_CTRLA_MODE_COUNT32) {
-		hri_tccount32_write_CC_reg(hw, 0, _tcs[i].cc0);
-		hri_tccount32_write_CC_reg(hw, 1, _tcs[i].cc1);
-	} else {
-		hri_tccount16_write_CC_reg(hw, 0, _tcs[i].cc0);
-		hri_tccount16_write_CC_reg(hw, 1, _tcs[i].cc1);
+
+	if (TC_CTRLA_MODE_COUNT32_Val == hri_tc_read_CTRLA_MODE_bf(hw)) {
+		hri_tccount32_write_CC_reg(hw, 0, clock_cycles);
+	} else if (TC_CTRLA_MODE_COUNT16_Val == hri_tc_read_CTRLA_MODE_bf(hw)) {
+		hri_tccount16_write_CC_reg(hw, 0, (hri_tccount16_cc_reg_t)clock_cycles);
+	} else if (TC_CTRLA_MODE_COUNT8_Val == hri_tc_read_CTRLA_MODE_bf(hw)) {
+		hri_tccount8_write_PER_reg(hw, (hri_tccount8_per_reg_t)clock_cycles);
 	}
 }
 /**
- * \brief Get pwm waveform period value
+ * \brief Retrieve timer period
  */
-pwm_period_t _pwm_get_period(const struct _pwm_device *const device)
+uint32_t _timer_get_period(const struct _timer_device *const device)
 {
 	void *const hw = device->hw;
-	int8_t      i  = get_tc_index(hw);
 
-	if ((_tcs[i].ctrl_a & TC_CTRLA_MODE_Msk) == TC_CTRLA_MODE_COUNT32) {
-		return (pwm_period_t)(hri_tccount32_read_CC_reg(hw, 0));
-	} else {
-		return (pwm_period_t)(hri_tccount16_read_CC_reg(hw, 0));
-	}
-}
-/**
- * \brief Get pwm waveform duty cycle
- */
-uint32_t _pwm_get_duty(const struct _pwm_device *const device)
-{
-	void *const hw = device->hw;
-	int8_t      i  = get_tc_index(hw);
-	uint32_t    per;
-	uint32_t    duty_cycle;
-
-	if ((_tcs[i].ctrl_a & TC_CTRLA_MODE_Msk) == TC_CTRLA_MODE_COUNT32) {
-		per        = hri_tccount32_read_CC_reg(hw, 0);
-		duty_cycle = hri_tccount32_read_CC_reg(hw, 1);
-	} else {
-		per        = hri_tccount16_read_CC_reg(hw, 0);
-		duty_cycle = hri_tccount16_read_CC_reg(hw, 1);
+	if (TC_CTRLA_MODE_COUNT32_Val == hri_tc_read_CTRLA_MODE_bf(hw)) {
+		return hri_tccount32_read_CC_reg(hw, 0);
+	} else if (TC_CTRLA_MODE_COUNT16_Val == hri_tc_read_CTRLA_MODE_bf(hw)) {
+		return hri_tccount16_read_CC_reg(hw, 0);
+	} else if (TC_CTRLA_MODE_COUNT8_Val == hri_tc_read_CTRLA_MODE_bf(hw)) {
+		return hri_tccount8_read_PER_reg(hw);
 	}
 
-	return ((duty_cycle * 1000) / per);
+	return 0;
 }
 /**
- * \brief Check if PWM is running
+ * \brief Check if timer is running
  */
-bool _pwm_is_enabled(const struct _pwm_device *const device)
+bool _timer_is_started(const struct _timer_device *const device)
 {
 	return hri_tc_get_CTRLA_ENABLE_bit(device->hw);
-}
-/**
- * \brief Enable/disable PWM interrupt
- */
-void _pwm_set_irq_state(struct _pwm_device *const device, const enum _pwm_callback_type type, const bool disable)
-{
-	ASSERT(device);
-
-	if (PWM_DEVICE_PERIOD_CB == type) {
-		hri_tc_write_INTEN_OVF_bit(device->hw, disable);
-	} else if (PWM_DEVICE_ERROR_CB == type) {
-		hri_tc_write_INTEN_ERR_bit(device->hw, disable);
-	}
 }
 
 /**
@@ -280,34 +252,35 @@ struct _pwm_hpl_interface *_tc_get_pwm(void)
 	return NULL;
 }
 /**
- * \internal TC interrupt handler for PWM
+ * \brief Set timer IRQ
+ *
+ * \param[in] hw The pointer to hardware instance
+ */
+void _timer_set_irq(struct _timer_device *const device)
+{
+	_irq_set((IRQn_Type)((uint8_t)TC_IRQ_BASE_INDEX + tc_get_hardware_index(device->hw)));
+}
+/**
+ * \internal TC interrupt handler for Timer
  *
  * \param[in] instance TC instance number
  */
-static void tc_pwm_interrupt_handler(struct _pwm_device *device)
+static void tc_interrupt_handler(struct _timer_device *device)
 {
 	void *const hw = device->hw;
 
 	if (hri_tc_get_interrupt_OVF_bit(hw)) {
 		hri_tc_clear_interrupt_OVF_bit(hw);
-		if (NULL != device->callback.pwm_period_cb) {
-			device->callback.pwm_period_cb(device);
-		}
-	}
-	if (hri_tc_get_INTEN_ERR_bit(hw)) {
-		hri_tc_clear_interrupt_ERR_bit(hw);
-		if (NULL != device->callback.pwm_error_cb) {
-			device->callback.pwm_error_cb(device);
-		}
+		device->timer_cb.period_expired(device);
 	}
 }
 
 /**
  * \brief TC interrupt handler
  */
-void TC7_Handler(void)
+void TC3_Handler(void)
 {
-	tc_pwm_interrupt_handler(_tc7_dev);
+	tc_interrupt_handler(_tc3_dev);
 }
 
 /**
@@ -351,8 +324,8 @@ static int8_t get_tc_index(const void *const hw)
  */
 static void _tc_init_irq_param(const void *const hw, void *dev)
 {
-	if (hw == TC7) {
-		_tc7_dev = (struct _pwm_device *)dev;
+	if (hw == TC3) {
+		_tc3_dev = (struct _timer_device *)dev;
 	}
 }
 

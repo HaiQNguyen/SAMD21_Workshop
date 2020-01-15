@@ -22,10 +22,14 @@ extern "C" {
 #include <hal_sleep.h>
 
 #include <hal_usart_sync.h>
-#include <hal_pwm.h>
+#include <hal_timer.h>
 #include <hpl_tc_base.h>
 
+#include <hal_pwm.h>
+#include <hpl_tcc.h>
+
 extern struct usart_sync_descriptor TARGET_IO;
+extern struct timer_descriptor      TIMER_0;
 
 extern struct pwm_descriptor PWM_0;
 
