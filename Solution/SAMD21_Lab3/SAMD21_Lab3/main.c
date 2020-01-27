@@ -7,6 +7,7 @@ uint16_t dac_buffer = 0;
 void ADC_ConversionComplete(const struct adc_async_descriptor *const descr, const uint8_t channel)
 {
 	conversion_complete = true;
+	printf("adc: %d\n",adc_buffer);
 }
 
 int main(void)
@@ -28,7 +29,7 @@ int main(void)
 			conversion_complete = false;
 		}
 		dac_buffer = (uint16_t)((1023 * adc_buffer)/255);
-		printf("adc: %d\n",adc_buffer);
+		
 		dac_async_write(&DAC_0, 0, &dac_buffer, 1);
 		delay_ms(100);
 		adc_async_start_conversion(&ADC_0);

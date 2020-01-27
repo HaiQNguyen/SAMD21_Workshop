@@ -10,6 +10,11 @@ For easier navigation, please download the repo and open the file index.html.
 
 For requirements and installation, please refer the document *0_Installation Guide*
 
+## Feedback
+
+After finish the workshop, please fill in the feedback form, which helps me improve the current workshop and others in the future.
+
+[To feedback form](https://forms.office.com/Pages/ResponsePage.aspx?id=NQzrC7uc60-Z5VieQVx5RMg5n-IZfapHqxcufCkdnFtUME5DQjQ2TlM4M1VFSjExRjNXQ0RIRUxHMC4u)
 ## Contact
 
 Quang Hai Nguyen 
